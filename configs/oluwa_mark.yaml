@@ -1,51 +1,52 @@
 # Oluwa Mark Dance Video Outpainting Config
 # Purpose: Test horizontal outpainting for extending cut-off body parts
 # Video: 540x960 portrait, 15 seconds, ~30fps
+# Note: Using 256x256 to fit in MPS memory (no fp16 support)
 
 oluwa_mark_horizontal:
 
   train_data:
     video_path: "../video-masker/source-clips/oluwa-mark/oluwa_original_2020.mp4"
-    prompt: "a man dancing, colorful outfit, dancing movements"
-    n_sample_frames: 16
+    prompt: "a man dancing, colorful outfit"
+    n_sample_frames: 8  # Reduced for memory
     width: 256
-    height: 512  # Maintain aspect ratio (2:1 becomes 1:2)
+    height: 256  # Square crop for memory efficiency
     sample_start_idx: 0
-    sample_frame_rate: 2  # Sample every 2 frames for 30fps source
+    sample_frame_rate: 4  # Sample every 4 frames
 
   validation_data:
     prompts:
-      - "a man dancing, colorful outfit, dancing movements, full body"
+      - "a man dancing, colorful outfit"
     prompts_l:
-      - "person, body, arm, hand"  # Extend left side (body parts)
+      - "arm, hand, body"
     prompts_r:
-      - "person, body, arm, hand"  # Extend right side (body parts)
+      - "arm, hand, body"
     prompts_t:
       - ""
     prompts_b:
       - ""
 
     prompts_neg:
-      - "blurry, low quality, distorted"
+      - ""
 
     is_grid: False
-    video_length: 16
+    video_length: 8
     width: 256
-    height: 512
+    height: 256
 
     # Horizontal outpainting: extend left and right by 50%
-    scale_l: 0.5  # Extend left by 50%
-    scale_r: 0.5  # Extend right by 50%
-    scale_t: 0.0  # No top extension
-    scale_b: 0.0  # No bottom extension
+    scale_l: 0.5
+    scale_r: 0.5
+    scale_t: 0.0
+    scale_b: 0.0
 
-    window_size: 16
+    window_size: 8
     stride: 4
 
     repeat_time: 0
     jump_length: 3
 
-    num_inference_steps: 50
+    num_inference_steps: 30  # Reduced for faster testing
     guidance_scale: 7.5
 
     bwd_mask: null

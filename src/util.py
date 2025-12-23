@@ -2,8 +2,10 @@ import os
 import imageio
 import numpy as np
 from typing import Union
+from pathlib import Path
 import torch
 import torchvision
+from PIL import Image
 from tqdm import tqdm
 from einops import rearrange
 
@@ -23,7 +25,17 @@ def isinstance_str(x: object, cls_name: str):
     return False
 
 
-def save_videos_grid(videos: torch.Tensor, path: str, rescale=False, n_rows=6, fps=8):
+def save_videos_grid(videos: torch.Tensor, path: str, rescale=False, n_rows=6, fps=8, save_png=True):
+    """Save video frames as GIF and optionally as PNG sequence.
+
+    Args:
+        videos: Tensor of shape (b, c, t, h, w)
+        path: Output path for GIF
+        rescale: Whether to rescale from [-1,1] to [0,1]
+        n_rows: Number of rows in grid
+        fps: Frames per second for GIF
+        save_png: If True, also saves individual frames as PNG sequence
+    """
     videos = rearrange(videos, "b c t h w -> t b c h w")
     print(videos.min())
     print(videos.max())
@@ -38,6 +50,68 @@ def save_videos_grid(videos: torch.Tensor, path: str, rescale=False, n_rows=6, f
 
     os.makedirs(os.path.dirname(path), exist_ok=True)
     imageio.mimsave(path, outputs, duration=1000 * 1 / fps)
+
+    # Also save as PNG sequence for better quality and reusability
+    if save_png:
+        png_dir = save_png_sequence(outputs, path)
+        return path, png_dir
+    return path, None
+
+
+def save_png_sequence(frames: list, base_path: str) -> str:
+    """Save frames as PNG sequence for lossless quality and easy manipulation.
+
+    Args:
+        frames: List of numpy arrays (H, W, C) in uint8 format
+        base_path: Base path (e.g., 'output/sample.gif')
+
+    Returns:
+        Path to the PNG sequence directory
+    """
+    base_path = Path(base_path)
+    png_dir = base_path.parent / f"{base_path.stem}_frames"
+    png_dir.mkdir(parents=True, exist_ok=True)
+
+    for i, frame in enumerate(frames):
+        frame_path = png_dir / f"frame_{i:06d}.png"
+        Image.fromarray(frame).save(frame_path)
+
+    print(f"Saved {len(frames)} PNG frames to {png_dir}")
+    return str(png_dir)
+
+
+def frames_to_video(png_dir: str, output_path: str, fps: int = 30, codec: str = "libx264"):
+    """Convert PNG sequence to video using ffmpeg.
+
+    Args:
+        png_dir: Directory containing PNG frames (frame_000000.png, etc.)
+        output_path: Output video path (.mp4, .webm, etc.)
+        fps: Frames per second
+        codec: Video codec (libx264 for mp4, libvpx-vp9 for webm with alpha)
+    """
+    import subprocess
+
+    frame_pattern = str(Path(png_dir) / "frame_%06d.png")
+
+    if output_path.endswith('.webm'):
+        # WebM with alpha channel support
+        cmd = [
+            'ffmpeg', '-y', '-framerate', str(fps),
+            '-i', frame_pattern,
+            '-c:v', 'libvpx-vp9', '-pix_fmt', 'yuva420p',
+            output_path
+        ]
+    else:
+        # Standard MP4
+        cmd = [
+            'ffmpeg', '-y', '-framerate', str(fps),
+            '-i', frame_pattern,
+            '-c:v', codec, '-pix_fmt', 'yuv420p',
+            output_path
+        ]
+
+    subprocess.run(cmd, capture_output=True)
+    print(f"Saved video to {output_path}")
 
 
 # DDIM Inversion
