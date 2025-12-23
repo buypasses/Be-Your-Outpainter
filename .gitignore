@@ -1,0 +1,25 @@
+# Virtual environment
+venv/
+.venv/
+
+# Models (downloaded from HuggingFace)
+models/
+
+# Results and logs
+results/
+logs/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# MacOS
+.DS_Store

@@ -1,0 +1,63 @@
+# Oluwa Mark Dance Video Outpainting Config
+# Purpose: Test horizontal outpainting for extending cut-off body parts
+# Video: 540x960 portrait, 15 seconds, ~30fps
+
+oluwa_mark_horizontal:
+
+  train_data:
+    video_path: "../video-masker/source-clips/oluwa-mark/oluwa_original_2020.mp4"
+    prompt: "a man dancing, colorful outfit, dancing movements"
+    n_sample_frames: 16
+    width: 256
+    height: 512  # Maintain aspect ratio (2:1 becomes 1:2)
+    sample_start_idx: 0
+    sample_frame_rate: 2  # Sample every 2 frames for 30fps source
+
+  validation_data:
+    prompts:
+      - "a man dancing, colorful outfit, dancing movements, full body"
+    prompts_l:
+      - "person, body, arm, hand"  # Extend left side (body parts)
+    prompts_r:
+      - "person, body, arm, hand"  # Extend right side (body parts)
+    prompts_t:
+      - ""
+    prompts_b:
+      - ""
+
+    prompts_neg:
+      - "blurry, low quality, distorted"
+
+    is_grid: False
+    video_length: 16
+    width: 256
+    height: 512
+
+    # Horizontal outpainting: extend left and right by 50%
+    scale_l: 0.5  # Extend left by 50%
+    scale_r: 0.5  # Extend right by 50%
+    scale_t: 0.0  # No top extension
+    scale_b: 0.0  # No bottom extension
+
+    window_size: 16
+    stride: 4
+
+    repeat_time: 0
+    jump_length: 3
+
+    num_inference_steps: 50
+    guidance_scale: 7.5
+
+    bwd_mask: null
+    fwd_mask: null
+    bwd_flow: null
+    fwd_flow: null
+
+    warp_step: [0, 0.5]
+    warp_time: 3
+
+  mask_config:
+    mask_l: [0., 0.4]
+    mask_r: [0., 0.4]
+    mask_t: [0., 0.4]
+    mask_b: [0., 0.4]
