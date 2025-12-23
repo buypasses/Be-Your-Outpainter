@@ -4,11 +4,26 @@ import logging
 import math
 import os
 from typing import Any, Dict, Optional, Tuple
+from contextlib import nullcontext
 from omegaconf import OmegaConf
 import torch
 import torch.utils.checkpoint
 
 import diffusers
+
+
+def get_autocast_context(device):
+    """Get the appropriate autocast context for the device."""
+    if device.type == "cuda":
+        return torch.autocast("cuda")
+    elif device.type == "mps":
+        # MPS autocast is available in PyTorch 2.0+
+        try:
+            return torch.autocast("mps")
+        except Exception:
+            return nullcontext()
+    else:
+        return nullcontext()
 from tqdm.auto import tqdm
 import transformers
 from accelerate import Accelerator
@@ -391,7 +406,7 @@ def main(base_config, config):
                             config.validation_data.prompts_neg,
                         )
                     ):
-                        with torch.autocast("cuda"):
+                        with get_autocast_context(accelerator.device):
                             sample_wide = validation_pipeline(
                                 prompt=prompt,
                                 prompt_l=prompt_l,
@@ -428,7 +443,7 @@ def main(base_config, config):
                             config.validation_data.prompts_neg,
                         )
                     ):
-                        with torch.autocast("cuda"):
+                        with get_autocast_context(accelerator.device):
                             sample_wide = validation_pipeline(
                                 prompt=prompt,
                                 prompt_l=prompt_l,
@@ -566,7 +581,7 @@ def main(base_config, config):
                                 config.validation_data.prompts_neg,
                             )
                         ):
-                            with torch.autocast("cuda"):
+                            with get_autocast_context(accelerator.device):
                                 sample_wide = validation_pipeline(
                                     prompt=prompt,
                                     prompt_l=prompt_l,
@@ -628,7 +643,7 @@ def main(base_config, config):
                                 config.validation_data.prompts_neg,
                             )
                         ):
-                            with torch.autocast("cuda"):
+                            with get_autocast_context(accelerator.device):
                                 sample_wide = validation_pipeline(
                                     prompt=prompt,
                                     prompt_l=prompt_l,
@@ -690,7 +705,7 @@ def main(base_config, config):
                                 config.validation_data.prompts_neg,
                             )
                         ):
-                            with torch.autocast("cuda"):
+                            with get_autocast_context(accelerator.device):
                                 sample_wide = validation_pipeline(
                                     prompt=prompt,
                                     prompt_l=prompt_l,
@@ -758,5 +773,8 @@ if __name__ == "__main__":
             # print("fail at",key)
 
             main(base_config, config)
-            max_memory_allocated = torch.cuda.max_memory_allocated() / (1024**3)
-            print(f"max memory allocated: {max_memory_allocated:.3f} GB.")
+            if torch.cuda.is_available():
+                max_memory_allocated = torch.cuda.max_memory_allocated() / (1024**3)
+                print(f"max memory allocated: {max_memory_allocated:.3f} GB.")
+            elif torch.backends.mps.is_available():
+                print("MPS backend used - memory tracking not available")

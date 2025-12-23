@@ -1,9 +1,47 @@
-import decord
-
-decord.bridge.set_bridge("torch")
+# Use cv2 instead of decord for macOS/MPS compatibility
+import cv2
+import torch
 import numpy as np
 from torch.utils.data import Dataset
 from einops import rearrange
+
+
+class CV2VideoReader:
+    """OpenCV-based video reader as replacement for decord."""
+
+    def __init__(self, video_path, width=None, height=None):
+        self.video_path = video_path
+        self.width = width
+        self.height = height
+        self.cap = cv2.VideoCapture(video_path)
+        self.frame_count = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    def __len__(self):
+        return self.frame_count
+
+    def get_batch(self, indices):
+        frames = []
+        for idx in indices:
+            self.cap.set(cv2.CAP_PROP_POS_FRAMES, idx)
+            ret, frame = self.cap.read()
+            if ret:
+                # Convert BGR to RGB
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                if self.width and self.height:
+                    frame = cv2.resize(frame, (self.width, self.height))
+                frames.append(frame)
+            else:
+                # If frame read fails, duplicate last frame
+                if frames:
+                    frames.append(frames[-1].copy())
+                else:
+                    # Create black frame
+                    frames.append(np.zeros((self.height or 256, self.width or 256, 3), dtype=np.uint8))
+        return torch.from_numpy(np.stack(frames))
+
+    def __del__(self):
+        if hasattr(self, 'cap'):
+            self.cap.release()
 
 
 class TuneAVideoDataset(Dataset):
@@ -36,20 +74,18 @@ class TuneAVideoDataset(Dataset):
 
     def __getitem__(self, index):
         # load and sample video frames
-
-        vr = decord.VideoReader(self.video_path, width=self.width, height=self.height)
+        vr = CV2VideoReader(self.video_path, width=self.width, height=self.height)
         sample_index = list(
             range(self.sample_start_idx, len(vr), self.sample_frame_rate)
         )[: self.n_sample_frames]
-        assert len(sample_index) == self.n_sample_frames
+
         if len(sample_index) < self.n_sample_frames:
             # Calculate the number of frames to duplicate
             missing_frames = self.n_sample_frames - len(sample_index)
-
-            # Duplicate some frames to reach 16 frames
-            # For simplicity, duplicate the last frame
+            # Duplicate some frames to reach required frames
             last_frame_index = sample_index[-1] if sample_index else 0
             sample_index.extend([last_frame_index] * missing_frames)
+
         video = vr.get_batch(sample_index)
         video = rearrange(video, "f h w c -> f c h w")
 
@@ -96,7 +132,7 @@ class TuneAVideoDatasetSplit(Dataset):
         self.sample_frame_rate = sample_frame_rate
         self.stride = stride
         assert self.stride == 1
-        self.vr = decord.VideoReader(
+        self.vr = CV2VideoReader(
             self.video_path, width=self.width, height=self.height
         )
         self.sample_index = list(

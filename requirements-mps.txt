@@ -1,0 +1,31 @@
+# Requirements for Apple Silicon (MPS) compatibility
+# Tested on: Python 3.12, macOS with M4 Pro
+
+# Core dependencies
+torch>=2.5.0
+torchvision>=0.20.0
+
+# Diffusers and transformers
+diffusers>=0.30.0
+transformers>=4.40.0
+accelerate>=0.30.0
+
+# Image/video processing
+opencv-python>=4.10.0
+Pillow>=10.0.0
+imageio>=2.34.0
+imageio-ffmpeg>=0.4.9
+
+# Tensor operations
+einops>=0.8.0
+
+# Progress bars
+tqdm>=4.66.0
+
+# Configuration
+omegaconf>=2.3.0
+pyyaml>=6.0.0
+
+# Optional: For better performance (if available)
+# Note: xformers is CUDA-only and will not work on MPS
+# xformers  # DO NOT INSTALL - requires CUDA

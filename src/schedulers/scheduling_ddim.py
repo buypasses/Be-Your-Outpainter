@@ -25,7 +25,8 @@ import torch
 import torch.nn.functional as F
 
 from diffusers.configuration_utils import ConfigMixin, register_to_config
-from diffusers.utils import BaseOutput, randn_tensor
+from diffusers.utils import BaseOutput
+from diffusers.utils.torch_utils import randn_tensor
 from diffusers.schedulers.scheduling_utils import (
     KarrasDiffusionSchedulers,
     SchedulerMixin,

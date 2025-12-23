@@ -514,17 +514,17 @@ class BasicTransformerBlock(nn.Module):
         use_memory_efficient_attention_xformers: bool,
         attention_op: Optional[Callable] = None,
     ):
+        # Skip xformers on non-CUDA devices (e.g., MPS)
+        if not torch.cuda.is_available():
+            print("xformers requires CUDA, skipping on current device")
+            return
+
         if not is_xformers_available():
             print("Here is how to install it")
             raise ModuleNotFoundError(
                 "Refer to https://github.com/facebookresearch/xformers for more information on how to install"
                 " xformers",
                 name="xformers",
-            )
-        elif not torch.cuda.is_available():
-            raise ValueError(
-                "torch.cuda.is_available() should be True but is False. xformers' memory efficient attention is only"
-                " available for GPU "
             )
         else:
             try:
